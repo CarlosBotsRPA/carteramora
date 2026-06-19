@@ -26,6 +26,31 @@ class LecturaCarteraHandler(Handler):
         contexto.columnas_cartera = (
             creditos_cartera[0].columnas_tab() if creditos_cartera else ()
         )
+
+        if contexto.es_fin_de_mes:
+            contexto.creditos = creditos_cartera
+            contexto.total_enriquecidos = len(creditos_cartera)
+            logger.info(
+                "Fin de mes | base=CADETACACO | operaciones=%s (sin merge CAMOROSICO)",
+                len(creditos_cartera),
+            )
+            return contexto
+
+        ops_morosidad = {c.id_credito.strip() for c in contexto.creditos}
+        ops_cartera = {c.id_credito.strip() for c in creditos_cartera}
+        en_ambos = ops_morosidad & ops_cartera
+        solo_morosidad = ops_morosidad - ops_cartera
+        solo_cartera = ops_cartera - ops_morosidad
+        logger.info(
+            "Cobertura archivos | CAMOROSICO=%s | CADETACACO=%s | en_ambos=%s | "
+            "solo_CAMOROSICO=%s | solo_CADETACACO(no_en_acumulado)=%s",
+            len(ops_morosidad),
+            len(ops_cartera),
+            len(en_ambos),
+            len(solo_morosidad),
+            len(solo_cartera),
+        )
+
         contexto.creditos = self._merge_service.enriquecer_con_cartera(
             contexto.creditos, creditos_cartera
         )
